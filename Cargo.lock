@@ -962,9 +962,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-server"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ac2979dc01ee0ff15c8654979db40c3f00787502437c7f0b2e00f4bc24bdf36"
+checksum = "4f48c40e372c6faa8e812cfb4027e2cd65b6fc2c58a6b2077f941ec25051d2ac"
 dependencies = [
  "async-broadcast",
  "async-channel",
