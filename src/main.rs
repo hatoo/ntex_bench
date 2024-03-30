@@ -33,37 +33,43 @@ async fn main() -> Result<(), SendRequestError> {
     let now = std::time::Instant::now();
 
     let arbiters = (0..cpus)
-        .map(|i| {
-            let arbiter = Arbiter::new();
+        .filter_map(|i| {
+            let num_connection = opts.num_connection / cpus
+                + (if (opts.num_connection % cpus) > i {
+                    1
+                } else {
+                    0
+                });
+            if num_connection > 0 {
+                let arbiter = Arbiter::new();
+                (0..num_connection).for_each(|_| {
+                    let counter = counter.clone();
+                    let addr = opts.addr.clone();
+                    arbiter.exec_fn(move || {
+                        ntex::rt::spawn(async move {
+                            let client = Client::new();
+                            let request = client
+                                .get(&addr)
+                                .header("User-Agent", "ntex")
+                                .set_connection_type(ConnectionType::KeepAlive)
+                                .freeze()
+                                .unwrap();
 
-            // Be careful about fractional
-            let num_connection =
-                opts.num_connection / cpus + (if opts.num_connection % cpus > i { 1 } else { 0 });
-            (0..num_connection).for_each(|_| {
-                let counter = counter.clone();
-                let addr = opts.addr.clone();
-                arbiter.exec_fn(move || {
-                    ntex::rt::spawn(async move {
-                        let client = Client::new();
-                        let request = client
-                            .get(&addr)
-                            .header("User-Agent", "ntex")
-                            .set_connection_type(ConnectionType::KeepAlive)
-                            .freeze()
-                            .unwrap();
+                            while counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+                                < opts.num_works
+                            {
+                                let mut response = request.send().await.unwrap();
 
-                        while counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-                            < opts.num_works
-                        {
-                            let mut response = request.send().await.unwrap();
-
-                            while let Some(_) = response.next().await {}
-                        }
-                        Arbiter::current().stop();
+                                while let Some(_) = response.next().await {}
+                            }
+                            Arbiter::current().stop();
+                        });
                     });
                 });
-            });
-            arbiter
+                Some(arbiter)
+            } else {
+                None
+            }
         })
         .collect::<Vec<_>>();
 
