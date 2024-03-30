@@ -919,9 +919,9 @@ dependencies = [
 
 [[package]]
 name = "ntex-net"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "351bb5dde51f55f28c5f2e101d569d2ba176f59f5e4ad3a43ad257d4cc64451b"
+checksum = "a4b3d25d8f34ef7129f51a0230cddd8fa4dad9d4afc69e845828437156bbb3cd"
 dependencies = [
  "log",
  "ntex-bytes",
