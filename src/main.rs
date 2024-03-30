@@ -3,7 +3,10 @@ use std::sync::{atomic::AtomicUsize, Arc};
 use clap::Parser;
 use futures::StreamExt;
 use ntex::{
-    http::client::{error::SendRequestError, Client},
+    http::{
+        client::{error::SendRequestError, Client},
+        ConnectionType,
+    },
     rt::Arbiter,
 };
 
@@ -30,11 +33,13 @@ async fn main() -> Result<(), SendRequestError> {
     let now = std::time::Instant::now();
 
     let arbiters = (0..cpus)
-        .map(|_| {
+        .map(|i| {
             let arbiter = Arbiter::new();
 
             // Be careful about fractional
-            (0..opts.num_connection / cpus).for_each(|_| {
+            let num_connection =
+                opts.num_connection / cpus + (if opts.num_connection % cpus > i { 1 } else { 0 });
+            (0..num_connection).for_each(|_| {
                 let counter = counter.clone();
                 let addr = opts.addr.clone();
                 arbiter.spawn(Box::pin(async move {
@@ -46,6 +51,7 @@ async fn main() -> Result<(), SendRequestError> {
                             let mut response = client
                                 .get(&addr)
                                 .header("User-Agent", "ntex")
+                                .set_connection_type(ConnectionType::KeepAlive)
                                 .send()
                                 .await
                                 .unwrap();
@@ -66,6 +72,7 @@ async fn main() -> Result<(), SendRequestError> {
 
     let elapsed = now.elapsed();
 
+    println!("elapsed: {:?}", elapsed);
     println!("rps: {}", opts.num_works as f64 / elapsed.as_secs_f64());
 
     Ok(())
