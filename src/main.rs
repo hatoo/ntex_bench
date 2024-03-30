@@ -45,16 +45,17 @@ async fn main() -> Result<(), SendRequestError> {
                 arbiter.exec_fn(move || {
                     ntex::rt::spawn(async move {
                         let client = Client::new();
+                        let request = client
+                            .get(&addr)
+                            .header("User-Agent", "ntex")
+                            .set_connection_type(ConnectionType::KeepAlive)
+                            .freeze()
+                            .unwrap();
+
                         while counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
                             < opts.num_works
                         {
-                            let mut response = client
-                                .get(&addr)
-                                .header("User-Agent", "ntex")
-                                .set_connection_type(ConnectionType::KeepAlive)
-                                .send()
-                                .await
-                                .unwrap();
+                            let mut response = request.send().await.unwrap();
 
                             while let Some(_) = response.next().await {}
                         }
