@@ -42,7 +42,7 @@ async fn main() -> Result<(), SendRequestError> {
             (0..num_connection).for_each(|_| {
                 let counter = counter.clone();
                 let addr = opts.addr.clone();
-                arbiter.spawn(Box::pin(async move {
+                arbiter.exec_fn(move || {
                     ntex::rt::spawn(async move {
                         let client = Client::new();
                         while counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
@@ -60,7 +60,7 @@ async fn main() -> Result<(), SendRequestError> {
                         }
                         Arbiter::current().stop();
                     });
-                }));
+                });
             });
             arbiter
         })
